@@ -12,13 +12,7 @@ import axios from "axios";
 const WORKFLOW_NAME = "MyWorkflow"; // Name used for saving/loading
 
 function WorkflowEditor() {
-  // Default Start and End Nodes
-  const defaultNodes = [
-    { id: "start", type: "input", data: { label: "Start" }, position: { x: 200, y: 50 }, nodeType: "start", style: { backgroundColor: "lightgray" } },
-    { id: "end", type: "output", data: { label: "End" }, position: { x: 200, y: 400 }, nodeType: "end", style: { backgroundColor: "lightgray" } },
-  ];
-
-  const [nodes, setNodes, onNodesChange] = useNodesState(defaultNodes);
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [nodeId, setNodeId] = useState(1);
 
@@ -27,14 +21,20 @@ function WorkflowEditor() {
     try {
       const response = await axios.get(`http://localhost:8000/api/load_workflow/?name=${WORKFLOW_NAME}`);
       if (response.data.nodes && response.data.edges) {
-        // Ensure Start & End nodes are always present
         const loadedNodes = response.data.nodes.map((node) => ({
           ...node,
-          style: { backgroundColor: "lightgray" }, // Default color
+          style: { backgroundColor: "lightgray" },
         }));
-        setNodes([...defaultNodes, ...loadedNodes]);
+        setNodes(loadedNodes);
         setEdges(response.data.edges);
-        console.log("Workflow loaded!");
+
+        // Find the highest nodeId from existing nodes and update state
+        const maxNodeId = loadedNodes
+          .map((node) => parseInt(node.id.split("-")[1])) // Extract number from id
+          .filter((id) => !isNaN(id)) // Remove invalid IDs
+          .reduce((max, id) => Math.max(max, id), 0); // Get highest ID
+
+        setNodeId(maxNodeId + 1);
       }
     } catch (error) {
       console.error("Error loading workflow:", error.response?.data?.error);
@@ -44,7 +44,6 @@ function WorkflowEditor() {
   // Function to Save Workflow to DB
   const saveWorkflow = async () => {
     try {
-      // Save all nodes (including Start & End) with positions
       const nodesToSave = nodes.map((node) => ({
         id: node.id,
         data: node.data,
@@ -64,22 +63,22 @@ function WorkflowEditor() {
     }
   };
 
-  // Function to Add a Process Node
-  const addProcessNode = () => {
+  // Function to Add a New Process Node (Ensuring Unique Node ID)
+  const addProcessNode = (processType) => {
     const newNode = {
       id: `process-${nodeId}`,
-      data: { label: `Process ${nodeId}` },
+      data: { label: `${processType}` },
       position: { x: Math.random() * 400, y: Math.random() * 400 },
-      nodeType: "process",
-      function: `execute_process_${nodeId}`,
-      style: { backgroundColor: "lightgray" }, // Default color
+      nodeType: processType,
+      function: `execute_${processType}`,
+      style: { backgroundColor: "lightgray" },
     };
     setNodes((nds) => [...nds, newNode]);
-    setNodeId(nodeId + 1);
+    setNodeId(nodeId + 1); // Increment nodeId to ensure uniqueness
   };
 
   // Function to Highlight Running Node
-  const highlightNode = (nodeId, color) => {
+  const highlightNode = async (nodeId, color) => {
     setNodes((nds) =>
       nds.map((node) =>
         node.id === nodeId ? { ...node, style: { backgroundColor: color } } : node
@@ -87,7 +86,7 @@ function WorkflowEditor() {
     );
   };
 
-  // Function to Execute Workflow Sequentially
+  // Function to Execute Workflow with Color Visualization
   const executeWorkflow = async () => {
     console.log("Starting workflow execution...");
 
@@ -96,8 +95,8 @@ function WorkflowEditor() {
       return;
     }
 
-    // Find the first node (Start Node)
-    let currentNode = nodes.find((node) => node.nodeType === "start");
+    const nodeIdsWithIncomingEdges = new Set(edges.map((edge) => edge.target));
+    let currentNode = nodes.find((node) => !nodeIdsWithIncomingEdges.has(node.id));
 
     if (!currentNode) {
       alert("No valid starting node found!");
@@ -108,15 +107,21 @@ function WorkflowEditor() {
       console.log(`Executing node: ${currentNode.id}`);
 
       // Highlight the running node in yellow
-      highlightNode(currentNode.id, "yellow");
+      await highlightNode(currentNode.id, "yellow");
 
       await axios.post("http://localhost:8000/api/execute_node/", {
         node_id: currentNode.id,
         node_type: currentNode.nodeType,
+        task_data: "Test Input", // Example input
+      }).then(response => {
+        console.log("Execution Result:", response.data.result);
+      }).catch(error => {
+        console.error("Execution Error:", error);
       });
 
       // Reset color to default after execution
-      highlightNode(currentNode.id, "lightgray");
+      await new Promise((resolve) => setTimeout(resolve, 500)); // Wait briefly for visualization
+      await highlightNode(currentNode.id, "lightgray");
 
       let nextEdge = edges.find((edge) => edge.source === currentNode.id);
       if (nextEdge) {
@@ -129,25 +134,22 @@ function WorkflowEditor() {
     alert("Workflow execution completed!");
   };
 
-  // Load workflow when the component mounts
   useEffect(() => {
     loadWorkflow();
   }, []);
 
   return (
     <div style={{ height: "100vh", width: "100%" }}>
-      <button onClick={addProcessNode} style={{ margin: "5px" }}>Add Process Node</button>
+      <button onClick={() => addProcessNode("process-1")} style={{ margin: "5px" }}>Process 1</button>
+      <button onClick={() => addProcessNode("process-2")} style={{ margin: "5px" }}>Process 2</button>
+      <button onClick={() => addProcessNode("process-3")} style={{ margin: "5px" }}>Process 3</button>
+      <button onClick={() => addProcessNode("process-4")} style={{ margin: "5px" }}>Process 4</button>
+      <button onClick={() => addProcessNode("process-5")} style={{ margin: "5px" }}>Process 5</button>
+
       <button onClick={saveWorkflow} style={{ margin: "5px", background: "orange" }}>Save Workflow</button>
       <button onClick={executeWorkflow} style={{ margin: "5px", background: "lightgreen" }}>Run Workflow</button>
 
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={(params) => setEdges((eds) => addEdge(params, eds))}
-        fitView
-      >
+      <ReactFlow nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={(params) => setEdges((eds) => addEdge(params, eds))} fitView>
         <Controls />
         <Background />
       </ReactFlow>
