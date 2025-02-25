@@ -19,7 +19,7 @@ function WorkflowEditor() {
   // Function to Load Workflow from DB
   const loadWorkflow = async () => {
     try {
-      const response = await axios.get(`http://localhost:8000/api/load_workflow/?name=${WORKFLOW_NAME}`);
+      const response = await axios.get(`https://block-flow-api.vercel.app/api/load_workflow/?name=${WORKFLOW_NAME}`);
       if (response.data.nodes && response.data.edges) {
         const loadedNodes = response.data.nodes.map((node) => ({
           ...node,
@@ -51,7 +51,7 @@ function WorkflowEditor() {
         nodeType: node.nodeType,
       }));
 
-      await axios.post("http://localhost:8000/api/save_workflow/", {
+      await axios.post("https://block-flow-api.vercel.app/api/save_workflow/", {
         name: WORKFLOW_NAME,
         nodes: nodesToSave,
         edges,
@@ -109,7 +109,7 @@ function WorkflowEditor() {
       // Highlight the running node in yellow
       await highlightNode(currentNode.id, "yellow");
 
-      await axios.post("http://localhost:8000/api/execute_node/", {
+      await axios.post("https://block-flow-api.vercel.app/api/execute_node/", {
         node_id: currentNode.id,
         node_type: currentNode.nodeType,
         task_data: "Test Input", // Example input
