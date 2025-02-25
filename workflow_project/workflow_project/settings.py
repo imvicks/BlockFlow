@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-==s%=@z!yi6db$dy&@77b14r!)fo*%t884rva5!5l3g$815e-@
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '.vercel.app', ]
 
 
 # Application definition
@@ -40,11 +40,18 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'corsheaders',
-    
     'workflow',
 ]
 
+CORS_ALLOWED_ORIGINS = [
+    "https://block-flow.vercel.app/", 
+]
+
+CORS_ALLOW_ALL_ORIGINS = False  # Set to False for security
+CORS_ALLOW_CREDENTIALS = True  # Allow credentials if needed
+
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
@@ -130,6 +137,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
