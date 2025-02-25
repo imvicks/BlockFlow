@@ -1,0 +1,18 @@
+Django>=4.0
+djangorestframework>=3.14
+django-cors-headers>=3.13
+
+# gunicorn>=21.0
+# whitenoise>=6.4
+# psycopg2-binary>=2.9  # If using PostgreSQL (remove if using SQLite)
+# drf-yasg>=1.21  # Optional: For API documentation
+
+# # Frontend Dependencies (For React)
+# react>=18.2
+# react-dom>=18.2
+# react-flow-renderer>=11.7
+# axios>=1.4
+
+# # Dev Tools (Optional)
+# black>=23.1  # For code formatting
+# flake8>=6.0  # For linting
